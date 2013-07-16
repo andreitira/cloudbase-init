@@ -20,12 +20,12 @@ import unittest
 import urllib2
 
 from cloudbaseinit.metadata.services import base
-#from cloudbaseinit.openstack.common import cfg
+from cloudbaseinit.openstack.common import cfg
 #from cloudbaseinit.test.metadata import fake
 from cloudbaseinit.metadata.services import httpservice
 #from cloudbaseinit.osutils import windows
 
-#CONF = cfg.CONF
+CONF = cfg.CONF
 
 
 class HttpServiceTest(unittest.TestCase):
@@ -78,21 +78,23 @@ class HttpServiceTest(unittest.TestCase):
         self.assertTrue(response)
 
     def test_post_password_exists(self):
+        CONF.set_override("retry_count", 0)
+                
         version = 'latest'
 
         fake_request = urllib2.Request(mox.IsA(str), data=mox.IsA(str))
         m = urllib2.urlopen(fake_request)
-        fake_object = self.mox.CreateMockAnything()
-        m.AndRaise(urllib2.HTTPError("http://169.254.169.254/ ",
+        m.AndRaise(urllib2.HTTPError("http://169.254.169.254/",
                                         409,
                                         'test error',
                                         {},
-                                        fake_object))
+                                        None))
 
         self.mox.ReplayAll()
-        self.assertRaises(urllib2.HTTPError, self.svc.post_password,
-                            self.password, version)
+        response = self.svc.post_password(self.password, version)        
         self.mox.VerifyAll()
+        
+        self.assertFalse(response)
 
 
 '''
