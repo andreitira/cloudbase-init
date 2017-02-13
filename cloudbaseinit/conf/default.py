@@ -270,6 +270,16 @@ class GlobalOptions(conf_base.Options):
                          constant.CONFIGURATION_PASS_SERVICE,
                          constant.CONFIGURATION_PASS_ERROR_HANDLER],
                 help='The configuration pass name'),
+            cfg.BoolOpt(
+                'process_userdata', default=True,
+                help='Processes the userdata content based on the type, e.g. '
+                     'executing a PowerShell script'),
+            cfg.StrOpt(
+                'userdata_path',
+                default=None,
+                help='Copies the userdata to the given file path. The path '
+                     'can include environment variables that will be expanded,'
+                     ' e.g. "%%SYSTEMDRIVE%%\\CloudbaseInit\\UserData.bin"'),
         ]
 
         self._cli_options = [
