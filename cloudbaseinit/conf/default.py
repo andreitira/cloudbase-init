@@ -225,7 +225,7 @@ class GlobalOptions(conf_base.Options):
                      'be created. E.g.: "Temporary Storage"'),
             cfg.ListOpt(
                 'page_file_volume_mount_points', default=[],
-                help='Volume moiunt points on which a Windows page file needs '
+                help='Volume mount points on which a Windows page file needs '
                      'to be created. E.g.: '
                      '"\\\\?\\GLOBALROOT\\device\\Harddisk1\\Partition1\\"'),
             cfg.StrOpt(
