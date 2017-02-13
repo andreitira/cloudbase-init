@@ -280,6 +280,18 @@ class GlobalOptions(conf_base.Options):
                 help='Copies the userdata to the given file path. The path '
                      'can include environment variables that will be expanded,'
                      ' e.g. "%%SYSTEMDRIVE%%\\CloudbaseInit\\UserData.bin"'),
+            cfg.StrOpt(
+                'ephemeral_disk_volume_label', default=None,
+                help='Ephemeral disk volume label, e.g.: "Temporary Storage"'),
+            cfg.StrOpt(
+                'ephemeral_disk_volume_mount_point', default=None,
+                help='Ephemeral disk volume mount point, e.g.:'
+                     '"\\\\?\\GLOBALROOT\\device\\Harddisk1\\Partition1\\"'),
+            cfg.StrOpt(
+                'ephemeral_disk_data_loss_warning_path', default=None,
+                help='Ephemeral disk data loss warning path, relative to the '
+                     'ephemeral disk volume path. E.g.: '
+                     'DATALOSS_WARNING_README.txt'),
         ]
 
         self._cli_options = [

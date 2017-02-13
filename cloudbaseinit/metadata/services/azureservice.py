@@ -48,6 +48,7 @@ ROLE_PROPERTY_CERT_THUMB = "CertificateThumbprint"
 OVF_ENV_DRIVE_TAG = "E6DA6616-8EC4-48E0-BE93-58CE6ACE3CFB.tag"
 OVF_ENV_FILENAME = "ovf-env.xml"
 CUSTOM_DATA_FILENAME = "CustomData.bin"
+DATALOSS_WARNING_PATH = '$$\\OEM\\DATALOSS_WARNING_README.txt'
 
 
 class AzureService(base.BaseHTTPMetadataService):
@@ -439,6 +440,9 @@ class AzureService(base.BaseHTTPMetadataService):
             raise base.NotExistingMetadataException()
         with open(content_path, 'rb') as f:
             return f.read()
+
+    def get_ephemeral_disk_data_loss_warning(self):
+        return self.get_content(DATALOSS_WARNING_PATH)
 
     def load(self):
         try:

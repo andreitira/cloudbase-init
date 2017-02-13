@@ -220,6 +220,9 @@ class BaseMetadataService(object):
     def get_enable_automatic_updates(self):
         pass
 
+    def get_ephemeral_disk_data_loss_warning(self):
+        raise NotExistingMetadataException()
+
 
 class BaseHTTPMetadataService(BaseMetadataService):
 
