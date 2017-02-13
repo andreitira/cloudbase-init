@@ -47,6 +47,7 @@ ROLE_PROPERTY_CERT_THUMB = "CertificateThumbprint"
 
 OVF_ENV_DRIVE_TAG = "E6DA6616-8EC4-48E0-BE93-58CE6ACE3CFB.tag"
 OVF_ENV_FILENAME = "ovf-env.xml"
+CUSTOM_DATA_FILENAME = "CustomData.bin"
 
 
 class AzureService(base.BaseHTTPMetadataService):
@@ -55,6 +56,7 @@ class AzureService(base.BaseHTTPMetadataService):
         super(AzureService, self).__init__(base_url=None)
         self._enable_retry = True
         self._goal_state = None
+        self._config_set_drive_path = None
         self._ovf_env = None
         self._headers = {"x-ms-guest-agent-name": "cloudbase-init"}
         self._osutils = osutils_factory.get_os_utils()
@@ -308,22 +310,26 @@ class AzureService(base.BaseHTTPMetadataService):
     def get_instance_id(self):
         return self._get_role_instance_id()
 
-    def _get_ovf_env_path(self):
-        ovf_env_path = None
-        base_paths = self._osutils.get_logical_drives()
-        for base_path in base_paths:
-            tag_path = os.path.join(base_path, OVF_ENV_DRIVE_TAG)
-            if os.path.exists(tag_path):
-                ovf_env_path = os.path.join(base_path, OVF_ENV_FILENAME)
-                break
+    def _get_config_set_drive_path(self):
+        if not self._config_set_drive_path:
+            base_paths = self._osutils.get_logical_drives()
+            for base_path in base_paths:
+                tag_path = os.path.join(base_path, OVF_ENV_DRIVE_TAG)
+                if os.path.exists(tag_path):
+                    self._config_set_drive_path = base_path
 
-        if not ovf_env_path:
-            raise exception.CloudbaseInitException(
-                "No drive containing file %s could be found" %
-                OVF_ENV_FILENAME)
+            if not self._config_set_drive_path:
+                raise exception.ItemNotFoundException(
+                    "No drive containing file %s could be found" %
+                    OVF_ENV_DRIVE_TAG)
+        return self._config_set_drive_path
+
+    def _get_ovf_env_path(self):
+        base_path = self._get_config_set_drive_path()
+        ovf_env_path = os.path.join(base_path, OVF_ENV_FILENAME)
 
         if not os.path.exists(ovf_env_path):
-            raise exception.CloudbaseInitException(
+            raise exception.ItemNotFoundException(
                 "ovf-env path does not exist: %s" % ovf_env_path)
 
         LOG.debug("ovs-env path: %s", ovf_env_path)
@@ -404,6 +410,36 @@ class AzureService(base.BaseHTTPMetadataService):
             return use_avma.lower() == "true"
         return False
 
+    def _check_ovf_env_custom_data(self):
+        # If the custom data file is missing, ensure the configuration matches
+        ovf_env = self._get_ovf_env()
+        prov_section = ovf_env.Environment.wa_ProvisioningSection
+        win_prov_conf_set = prov_section.WindowsProvisioningConfigurationSet
+        if hasattr(win_prov_conf_set, "CustomData"):
+            return True
+
+    def get_user_data(self):
+        try:
+            return self.get_content(CUSTOM_DATA_FILENAME)
+        except base.NotExistingMetadataException:
+            if self._check_ovf_env_custom_data():
+                raise exception.ItemNotFoundException(
+                    "Custom data configuration exists, but the custom data "
+                    "file is not present")
+            raise
+
+    def get_decoded_user_data(self):
+        # Don't decode to retain compability
+        return self.get_user_data()
+
+    def get_content(self, name):
+        base_path = self._get_config_set_drive_path()
+        content_path = os.path.join(base_path, name)
+        if not os.path.exists(content_path):
+            raise base.NotExistingMetadataException()
+        with open(content_path, 'rb') as f:
+            return f.read()
+
     def load(self):
         try:
             wire_server_endpoint = self._get_wire_server_endpoint_address()
@@ -420,9 +456,3 @@ class AzureService(base.BaseHTTPMetadataService):
         except Exception as ex:
             LOG.exception(ex)
             return False
-
-
-        # self._get_hosting_environment()
-        # self._get_shared_config()
-        # self._get_extensions_config()
-        # self._get_full_config()

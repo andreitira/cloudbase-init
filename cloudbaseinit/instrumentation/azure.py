@@ -45,7 +45,8 @@ class AzureInstrumentation(base.BaseInstrumentation):
         "PA_specialize_4_ConfigureSanPolicy",
         (constant.CONFIGURATION_PASS_SPECIALIZE, "RDPSettingsPlugin"):
         "PA_specialize_5_ConfigureRdpKeepAlive",
-        # "PA_specialize_6_CopyCustomData"
+        (constant.CONFIGURATION_PASS_SPECIALIZE, "UserDataPlugin"):
+        "PA_specialize_6_CopyCustomData",
         # "PA_specialize_7_CopyTempDriveWarningReadme"
         # "PA_specialize_8_ReportNotReady",
         (constant.CONFIGURATION_PASS_SETUP_COMPLETE,
