@@ -75,14 +75,19 @@ class AzureInstrumentation(base.BaseInstrumentation):
         (constant.CONFIGURATION_PASS_SETUP_COMPLETE,
          "WindowsAutoUpdatesPlugin"):
         "PA_oobeSystem_9_ConfigureAutomaticUpdates",
+        (constant.CONFIGURATION_PASS_SETUP_COMPLETE,
+         "DisplayIdleTimeoutConfigPlugin"):
+        "PA_oobeSystem_10_SetScreenAlwaysOn",
+        (constant.CONFIGURATION_PASS_SETUP_COMPLETE, "TrimConfigPlugin"):
+        "PA_oobeSystem_11_TurnOffTRIM",
         (constant.CONFIGURATION_PASS_SETUP_COMPLETE, "AzureGuestAgentPlugin"):
-        "PA_oobeSystem_11_ConfigureGuestAgentService",
+        "PA_oobeSystem_12_ConfigureGuestAgentService",
         (constant.CONFIGURATION_PASS_SETUP_COMPLETE,
          constant.INSTRUMENT_REBOOT):
-        "PA_oobeSystem_12_RestartMachine",
+        "PA_oobeSystem_13_RestartMachine",
         (constant.CONFIGURATION_PASS_SETUP_COMPLETE,
          constant.INSTRUMENT_PROVISIONING_COMPLETED):
-        "PA_oobeSystem_13_ReportReady",
+        "PA_oobeSystem_14_ReportReady",
         (constant.CONFIGURATION_PASS_SETUP_COMPLETE,
          constant.INSTRUMENT_PROVISIONING_FAILED):
         "PA_errorHandler_0_ReportNotReady",
