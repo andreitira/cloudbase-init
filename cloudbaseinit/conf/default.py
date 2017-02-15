@@ -168,6 +168,10 @@ class GlobalOptions(conf_base.Options):
                      'to be tested for availability in the provided order. '
                      'The first available service will be used to retrieve '
                      'metadata'),
+            cfg.BoolOpt(
+                'metadata_service_not_found_error', default=False,
+                help='Terminates with an error if no metadata service can be '
+                     'loaded'),
             cfg.ListOpt(
                 'plugins',
                 default=[

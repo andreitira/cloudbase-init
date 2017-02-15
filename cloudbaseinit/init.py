@@ -235,6 +235,9 @@ class InitManager(object):
             except exception.MetadaNotFoundException:
                 LOG.error("No metadata service found")
                 service = None
+                if CONF.metadata_service_not_found_error:
+                    raise
+
         if service:
             LOG.info('Metadata service loaded: \'%s\'' %
                      service.get_name())
