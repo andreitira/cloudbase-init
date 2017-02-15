@@ -50,7 +50,7 @@ def _run_slmgr(args):
             'slmgr.vbs failed with error code %(exit_code)s.\n'
             'Output: %(out)s\nError: %(err)s' % {'exit_code': exit_code,
                                                  'out': out, 'err': err})
-    return out
+    return out.decode(errors='replace')
 
 
 def get_licensing_info():
