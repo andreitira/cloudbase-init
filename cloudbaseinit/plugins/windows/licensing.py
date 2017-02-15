@@ -47,7 +47,8 @@ class WindowsLicensingPlugin(base.BasePlugin):
             if not product_key and CONF.set_kms_product_key:
                 product_key = licensing.get_volume_activation_product_key(
                     license_family, constant.VOL_ACT_KMS)
-                LOG.error("KMS product key not found for this OS")
+                if not product_key:
+                    LOG.error("KMS product key not found for this OS")
 
             if product_key:
                 LOG.info("Setting product key: %s", product_key)
