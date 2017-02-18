@@ -50,6 +50,8 @@ OVF_ENV_FILENAME = "ovf-env.xml"
 CUSTOM_DATA_FILENAME = "CustomData.bin"
 DATALOSS_WARNING_PATH = '$$\\OEM\\DATALOSS_WARNING_README.txt'
 
+DEFAULT_KMS_HOST = "kms.core.windows.net"
+
 
 class AzureService(base.BaseHTTPMetadataService):
 
@@ -400,8 +402,10 @@ class AzureService(base.BaseHTTPMetadataService):
     def get_kms_host(self):
         ovf_env = self._get_ovf_env()
         plat_sett_section = ovf_env.Environment.wa_PlatformSettingsSection
+        host = None
         if hasattr(plat_sett_section.PlatformSettings, "KmsServerHostname"):
-            return plat_sett_section.PlatformSettings.KmsServerHostname.cdata
+            host = plat_sett_section.PlatformSettings.KmsServerHostname.cdata
+        return host or DEFAULT_KMS_HOST
 
     def get_use_avma_licensing(self):
         ovf_env = self._get_ovf_env()
