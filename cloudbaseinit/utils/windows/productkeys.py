@@ -101,6 +101,10 @@ SKU_TO_PRODUCT_KEY_MAP = {
         "ServerStandard": "WC2BQ-8NRM3-FDDYY-2BFGV-KHKQY",
         "ServerSolutionCore": "JCKRF-N37P4-C2D82-9YXRT-4M63B",
         "ServerSolution": "JCKRF-N37P4-C2D82-9YXRT-4M63B",
+        "ServerCloudStorage": "QN4C6-GBJD2-FB422-GHWJK-GJG2R",
+        "ServerCloudStorageCore": "QN4C6-GBJD2-FB422-GHWJK-GJG2R",
+        "ServerAzureCor": "VP34G-4NPPG-79JTQ-864T4-R3MQX",
+        "ServerAzureCorCore": "VP34G-4NPPG-79JTQ-864T4-R3MQX",
     },
 
     (10, 0, constant.VOL_ACT_AVMA): {

@@ -26,8 +26,11 @@ LOG = oslo_logging.getLogger(__name__)
 
 class WindowsLicensingPlugin(base.BasePlugin):
 
-    def _set_product_key(self, service):
-        description, license_family, is_current = licensing.get_kms_product()
+    def _set_product_key(self, service, manager):
+        if not CONF.set_kms_product_key and not CONF.set_avma_product_key:
+            return
+
+        description, license_family, is_current = manager.get_kms_product()
         if is_current:
             LOG.info('Product "%s" is already the current one, no need to set '
                      'a product key', description)
@@ -39,34 +42,39 @@ class WindowsLicensingPlugin(base.BasePlugin):
 
             product_key = None
             if use_avma:
-                product_key = licensing.get_volume_activation_product_key(
+                product_key = manager.get_volume_activation_product_key(
                     license_family, constant.VOL_ACT_AVMA)
                 if not product_key:
                     LOG.error("AVMA product key not found for this OS")
 
             if not product_key and CONF.set_kms_product_key:
-                product_key = licensing.get_volume_activation_product_key(
+                product_key = manager.get_volume_activation_product_key(
                     license_family, constant.VOL_ACT_KMS)
                 if not product_key:
                     LOG.error("KMS product key not found for this OS")
 
             if product_key:
                 LOG.info("Setting product key: %s", product_key)
-                licensing.set_product_key(product_key)
+                manager.set_product_key(product_key)
 
-    def _set_kms_host(self, service):
-        kms_host = service.get_kms_host()
+    def _set_kms_host(self, service, manager):
+        kms_host = service.get_kms_host() or CONF.kms_host
         if kms_host:
             LOG.info("Setting KMS host: %s", kms_host)
-            licensing.set_kms_host(kms_host)
+            manager.set_kms_host(*kms_host.split(':'))
 
-    def _activate_windows(self, service):
+    def _activate_windows(self, service, manager):
         if CONF.activate_windows:
             # note(alexpilotti): KMS clients activate themselves
             # so this could be skipped if a KMS host is set
             LOG.info("Activating Windows")
-            activation_result = licensing.activate_windows()
+            activation_result = manager.activate_windows()
             LOG.debug("Activation result:\n%s" % activation_result)
+
+    def _log_licensing_info(self, manager):
+        if CONF.log_licensing_info:
+            license_info = manager.get_licensing_info()
+            LOG.info('Microsoft Windows license info:\n%s' % license_info)
 
     def execute(self, service, shared_data):
         osutils = osutils_factory.get_os_utils()
@@ -75,16 +83,18 @@ class WindowsLicensingPlugin(base.BasePlugin):
             LOG.info("Licensing info and activation are not available on "
                      "Nano Server")
         else:
-            eval_end_date = licensing.is_eval()
+            manager = licensing.get_licensing_manager()
+
+            eval_end_date = manager.is_eval()
             if eval_end_date:
                 LOG.info("Evaluation license, skipping activation. "
                          "Evaluation end date: %s", eval_end_date)
             else:
-                self._set_product_key(service)
-                self._set_kms_host(service)
-                self._activate_windows(service)
+                self._set_product_key(service, manager)
+                self._set_kms_host(service, manager)
+                self._activate_windows(service, manager)
+                manager.refresh_status()
 
-            license_info = licensing.get_licensing_info()
-            LOG.info('Microsoft Windows license info:\n%s' % license_info)
+            self._log_licensing_info(manager)
 
         return base.PLUGIN_EXECUTION_DONE, False
