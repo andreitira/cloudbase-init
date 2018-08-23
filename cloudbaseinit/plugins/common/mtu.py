@@ -40,7 +40,9 @@ class MTUPlugin(base.BasePlugin):
                     mtu_option_data = options_data.get(dhcp.OPTION_MTU)
                     if mtu_option_data:
                         mtu = struct.unpack('!H', mtu_option_data)[0]
-                        osutils.set_network_adapter_mtu(mac_address, mtu)
+                        name = osutils.get_network_adapter_name_by_mac_address(
+                            mac_address)
+                        osutils.set_network_adapter_mtu(name, mtu)
                     else:
                         LOG.debug('Could not obtain the MTU configuration '
                                   'via DHCP for interface "%s"' % mac_address)
