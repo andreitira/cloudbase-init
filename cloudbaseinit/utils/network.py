@@ -24,7 +24,6 @@ from six.moves.urllib import request
 
 from cloudbaseinit.osutils import factory as osutils_factory
 
-
 LOG = oslo_logging.getLogger(__name__)
 MAX_URL_CHECK_RETRIES = 3
 
