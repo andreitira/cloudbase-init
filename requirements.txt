@@ -8,6 +8,7 @@ oslo.log
 six>=1.7.0
 Babel>=1.3
 oauthlib
+ipaddress
 netifaces
 PyYAML
 requests
