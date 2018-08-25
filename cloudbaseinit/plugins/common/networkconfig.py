@@ -15,6 +15,7 @@
 
 import re
 
+import ipaddress
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import exception
@@ -36,6 +37,8 @@ NET_REQUIRE = {
     ("gateway", "gateway6"): False,
     "dnsnameservers": False
 }
+
+BOND_FORMAT_STR = "bond_%s"
 
 
 def _name2idx(name):
@@ -120,13 +123,8 @@ def _preprocess_nics(network_details, network_adapters):
 
 
 class NetworkConfigPlugin(plugin_base.BasePlugin):
-
-    def execute(self, service, shared_data):
+    def _process_network_details(self, network_details):
         osutils = osutils_factory.get_os_utils()
-        network_details = service.get_network_details()
-        if not network_details:
-            return plugin_base.PLUGIN_EXECUTION_DONE, False
-
         # Check and save NICs by MAC.
         network_adapters = osutils.get_network_adapters()
         network_details = _preprocess_nics(network_details,
@@ -148,6 +146,7 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
 
             name = osutils.get_network_adapter_name_by_mac_address(mac)
             LOG.info("Configuring network adapter: %s", name)
+
             reboot = osutils.set_static_network_config(
                 name,
                 nic.address,
@@ -173,3 +172,119 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
             LOG.error("No adapters were configured")
 
         return plugin_base.PLUGIN_EXECUTION_DONE, reboot_required
+
+    def _process_network_details_v2(self, network_details):
+        reboot_required = False
+
+        osutils = osutils_factory.get_os_utils()
+        network_adapters = osutils.get_network_adapters()
+        if not network_adapters:
+            raise exception.CloudbaseInitException(
+                "no network adapters available")
+
+        physical_links = [
+            link for link in network_details.links if
+            link.type == network_model.LINK_TYPE_PHYSICAL]
+
+        for link in physical_links:
+            adapter_name = [
+                a[0] for a in network_adapters
+                if a[1].lower() == link.mac_address.lower()]
+            if not len(adapter_name):
+                raise exception.ItemNotFoundException(
+                    "No adapter found matching MAC address: %s" %
+                    link.mac_address)
+
+            if len(adapter_name) > 1:
+                raise exception.CloudbaseInitException(
+                    "More than one adapter matches the following MAC "
+                    "address: %s" % link.mac_address)
+
+            adapter_name = adapter_name[0]
+
+            if adapter_name != link.name:
+                LOG.info(
+                    "Renaming network adapter \"%(old_name)s\" to "
+                    "\"%(new_name)s\"",
+                    {"old_name": adapter_name, "new_name": link.name})
+                osutils.rename_network_adapter(adapter_name, link.name)
+
+            if link.mtu:
+                LOG.debug(
+                    "Setting MTU on adapter \"%(name)s\": %(mtu)s",
+                    {"name": link.name, "mtu": link.mtu})
+                osutils.set_network_adapter_mtu(link.name, link.mtu)
+
+        bond_links = [
+            link for link in network_details.links if
+            link.type == network_model.LINK_TYPE_BOND]
+
+        for link in bond_links:
+            bond_name = BOND_FORMAT_STR % link.name
+            primary_nic_vlan_id = None
+            LOG.info("Creating network team: %s", bond_name)
+            osutils.create_network_team(
+                bond_name, link.bond.type, link.bond.lb_algorithm,
+                link.bond.members, link.mac_address, link.name,
+                primary_nic_vlan_id, link.bond.lacp_rate)
+
+            if link.mtu:
+                LOG.debug(
+                    "Setting MTU on bond adapter \"%(name)s\": %(mtu)s",
+                    {"name": link.name, "mtu": link.mtu})
+                osutils.set_network_adapter_mtu(link.name, link.mtu)
+
+        vlan_links = [
+            link for link in network_details.links if
+            link.type == network_model.LINK_TYPE_VLAN]
+
+        for link in vlan_links:
+            bond_name = BOND_FORMAT_STR % link.vlan_link
+            LOG.info(
+                "Creating bond adapter \"%(nic_name)s\" on team "
+                "\"%(bond_name)s\" with VLAN: %(vlan_id)s",
+                {"nic_name": link.name, "bond_name": bond_name,
+                 "vlan_id": link.vlan_id})
+            osutils.add_network_team_nic(bond_name, link.name, link.vlan_id)
+
+            if link.mtu:
+                LOG.debug(
+                    "Setting MTU on bond adapter \"%(name)s\": %(mtu)s",
+                    {"name": link.name, "mtu": link.mtu})
+                osutils.set_network_adapter_mtu(link.name, link.mtu)
+
+        for net in network_details.networks:
+            ip_info = ipaddress.ip_interface(net.address_cidr)
+
+            gateway = None
+            default_gw_route = [
+                r for r in net.routes if
+                ipaddress.ip_network(r.network_cidr).prefixlen == 0]
+            if default_gw_route:
+                gateway = default_gw_route[0].gateway
+
+            ip = str(ip_info.ip)
+            netmask = str(ip_info.netmask)
+
+            LOG.info(
+                "Setting static IP configuration on adapter \"%(name)s\". "
+                "IP: %(ip)s, netmask: %(netmask)s, "
+                "gateway: %(gateway)s, dns: %(dns)s",
+                {"name": net.link, "ip": ip, "netmask": netmask,
+                 "gateway": gateway, "dns": net.dns_nameservers})
+            reboot = osutils.set_static_network_config(
+                net.link, ip, netmask, gateway, net.dns_nameservers)
+            reboot_required = reboot or reboot_required
+
+        return plugin_base.PLUGIN_EXECUTION_DONE, reboot_required
+
+    def execute(self, service, shared_data):
+        network_details = service.get_network_details_v2()
+        if network_details:
+            return self._process_network_details_v2(network_details)
+
+        network_details = service.get_network_details()
+        if network_details:
+            return self._process_network_details(network_details)
+
+        return plugin_base.PLUGIN_EXECUTION_DONE, False
